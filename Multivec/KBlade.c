@@ -169,12 +169,37 @@ static void KBlade_InitializeBasisKBlades(KBlade* blade)
 {
 	if(blade->grade == 0)
 		return;
-	int* e = calloc(sizeof(int), blade->grade);
+	unsigned int* e = calloc(sizeof(int), blade->grade);
 	for(unsigned int i = 0; i < blade->grade; i++)
 	{
 		e[i] = i;
 	}
 
+	for(int i = 0; i < blade->numComponents; i++)
+	{
+		for(unsigned int j = 0; j < blade->grade; j++)
+		{
+			blade->basisKBlades[i] |= (1 << e[j]);
+		}
+
+		unsigned int index = blade->grade - 1;
+		
+		e[index]++;
+		for(unsigned int j = 1; j <= blade->grade; j++)
+		{
+			if(e[blade->grade - j] > (blade->dimension - j))
+			{
+				if(blade->grade - j == 0) break;	//done
+				else
+				{
+					e[blade->grade - j - 1]++;
+					e[blade->grade - j] = e[blade->grade - j - 1] + 1;
+				}
+			}
+		}
+
+	}
+	/*
 	//e = [0, 1, 2, .., Grade - 1]
 	unsigned char keepGoing = 1;
 	int kBladesGenerated = 0;
@@ -192,6 +217,7 @@ static void KBlade_InitializeBasisKBlades(KBlade* blade)
 			keepGoing = KBlade_InitializeBasisKBladeCarry(e, blade->grade, blade->dimension);
 		}
 	}
+	*/
 
 	free(e);
 }
@@ -227,6 +253,21 @@ void KBlade_ReGrade(KBlade* blade, int grade)
 
 	KBlade_InitializeBasisKBlades(blade);
 
+}
+
+///
+//Gets the index of the scalar component of a basis K-blade
+//
+//Parameters:
+//	blade: A pointer to the blade to index
+//	basisKBlade: The bitmask indicating which basis K-blade to access
+//
+//Returns:
+//	A pointer to the scalar component of the desired basis KBlade
+float* KBlade_Index(KBlade* blade, unsigned char basisKBlade)
+{
+	int index = KBlade_DetermineBasisKBladeIndex(basisKBlade, blade->grade, blade->dimension);
+	return blade->components + index;
 }
 
 ///
@@ -325,6 +366,21 @@ void KBlade_Subtract(KBlade* dest, KBlade* a, KBlade* b)
 }
 
 ///
+//Scales a KBlade by a given scalar value
+//Multiplies each component of a KBlade by a scalar value
+//
+//Parameters:
+//	blade: A pointer to the blade to scale
+//	scalar: The scalar value to scale it by
+void KBlade_Scale(KBlade* blade, float scalar)
+{
+	for(int i = 0; i < blade->numComponents; i++)
+	{
+		blade->components[i] *= scalar;
+	}
+}
+
+///
 //Determines if the product of two basis K blades will negate the sign
 //of the coefficient of the product
 //
@@ -360,8 +416,8 @@ static float KBlade_DetermineProductTermSign(char basisA, unsigned int gradeA, c
 		{
 			power += (j - i) - 1;
 
-			char save = orderedDimensions[i + 1];
-			memmove(orderedDimensions + i + 1, orderedDimensions + i + 2,  (j - (i + 2)) + 1);
+			char save = orderedDimensions[j];
+			memmove(orderedDimensions + i + 2, orderedDimensions + i + 1,  (j - i) - 1);
 			orderedDimensions[j] = save;
 
 			i+=2;
@@ -414,10 +470,12 @@ static unsigned int KBlade_DetermineBasisKBladeIndex(char blade, unsigned int gr
 
 		if(!(blade & (1 << i)))
 		{
-			if(grade >= i)
-				++total;
-			else
-				total += Compute_BinomialCoefficient(dim - i, grade - i);
+			//if(grade - numSet <= 1)
+			//	++total;
+			//else
+			//{
+				total += Compute_BinomialCoefficient(dim - (i+1), grade - (numSet + 1));
+			//}
 		}
 		else
 		{
@@ -462,8 +520,8 @@ void KBlade_GetDual(KBlade* dest, KBlade* blade)
 			//Multiply each term
 			for(unsigned int i = 0; i < blade->dimension; i++)
 			{
-				float sign = KBlade_DetermineProductTermSign(blade->basisKBlades[i], blade->grade, basisPsuedoScalar, blade->dimension, blade->dimension);
-				unsigned char basisKBlade = blade->basisKBlades[i] ^ basisPsuedoScalar;
+				float sign = KBlade_DetermineProductTermSign(basisPsuedoScalar, blade->dimension, blade->basisKBlades[i], blade->grade, blade->dimension);
+				unsigned char basisKBlade = basisPsuedoScalar ^ blade->basisKBlades[i];
 				unsigned int index = KBlade_DetermineBasisKBladeIndex(basisKBlade, grade, dest->dimension);
 				dest->components[index] += sign * blade->components[i];
 
@@ -529,6 +587,7 @@ void KBlade_GetProduct(Multivector* dest, KBlade* a, KBlade* b)
 //	blade: A pointer to the blade to print
 void KBlade_Print(KBlade* blade)
 {
+
 	for(int i = 0; i < blade->numComponents; i++)
 	{
 		printf("%f e", blade->components[i]);
@@ -537,6 +596,7 @@ void KBlade_Print(KBlade* blade)
 			if(blade->basisKBlades[i] & (1 << j))
 			{
 				printf("%d", j + 1);
+
 			}
 		}
 

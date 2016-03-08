@@ -59,6 +59,17 @@ void KBlade_Free(KBlade* blade);
 void KBlade_FreeArray(KBlade* blades, int size);
 
 ///
+//Gets the index of the scalar component of a basis K-blade
+//
+//Parameters:
+//	blade: A pointer to the blade to index
+//	basisKBlade: The bitmask indicating which basis K-blade to access
+//
+//Returns:
+//	A pointer to the scalar component of the desired basis KBlade
+float* KBlade_Index(KBlade* blade, unsigned char basisKBlade);
+
+///
 //Alters the grade of a KBlade and resizes the blade accordingly
 //The blade will be left as the zero KBlade with that grade
 //
@@ -101,6 +112,15 @@ void KBlade_Decrement(KBlade* dest, KBlade* dec);
 //	a: Pointer to the LHS operand
 //	b: Pointer to the RHS operand
 void KBlade_Subtract(KBlade* dest, KBlade* a, KBlade* b);
+
+///
+//Scales a KBlade by a given scalar value
+//Multiplies each component of a KBlade by a scalar value
+//
+//Parameters:
+//	blade: A pointer to the blade to scale
+//	scalar: The scalar value to scale it by
+void KBlade_Scale(KBlade* blade, float scalar);
 
 ///
 //Performs the inner product on two KBlades
